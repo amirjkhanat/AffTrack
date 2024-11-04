@@ -1,0 +1,500 @@
+// Database configuration
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Prisma Client generator
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum Status {
+  ACTIVE
+  PAUSED
+  EXPIRED
+  DELETED
+  TESTING
+  INACTIVE
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String?
+  role          UserRole  @default(USER)
+  emailVerified DateTime?
+  image         String?
+  active        Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Auth.js relations
+  accounts Account[]
+  sessions Session[]
+
+  // App relations
+  trafficSources   TrafficSource[]
+  landingPages     LandingPage[]
+  adPlacements     AdPlacement[]
+  affiliateOffers  AffiliateOffer[]
+  trackingLinks    TrackingLink[]
+  splitTests       SplitTest[]
+  transferFeeds    TransferFeed[]
+  transferPartners TransferPartner[]
+  activities       Activity[]
+  AffiliateNetwork AffiliateNetwork[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Visitor {
+  id              String         @id @default(cuid())
+  ipAddress       String
+  userAgent       String
+  referer         String?
+  landingPageId   String
+  landingPage     LandingPage    @relation(fields: [landingPageId], references: [id])
+  trafficSourceId String?
+  trafficSource   TrafficSource? @relation(fields: [trafficSourceId], references: [id])
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmContent      String?
+  utmTerm         String?
+  country         String?
+  region          String?
+  city            String?
+  browser         String?
+  os              String?
+  device          String?
+  timeOnSite      Int? // In seconds
+  pageViews       Int            @default(1)
+  bounced         Boolean        @default(false)
+  convertedToLead Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  views       View[]
+  clicks      Click[]
+  leads       Lead[]
+  conversions Conversion[]
+}
+
+model View {
+  id        String   @id @default(cuid())
+  visitorId String
+  visitor   Visitor    @relation(fields: [visitorId], references: [id])
+  url       String
+  title     String?
+  referrer  String?
+  createdAt DateTime @default(now())
+}
+
+model Click {
+  id             String       @id @default(cuid())
+  visitorId      String
+  visitor        Visitor        @relation(fields: [visitorId], references: [id])
+  ipAddress      String
+  userAgent      String
+  referer        String?
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+  createdAt      DateTime     @default(now())
+
+  // Relations
+  leads       Lead[]
+  conversions Conversion[]
+}
+
+model Lead {
+  id            String    @id @default(cuid())
+  visitorId     String?
+  visitor       Visitor?     @relation(fields: [visitorId], references: [id])
+  firstName     String?
+  lastName      String?
+  email         String
+  phone         String?
+  address       String?
+  address2      String?
+  city          String?
+  state         String?
+  zipcode       String?
+  dob_dd        Int?
+  dob_mm        Int?
+  dob_yyyy      Int?
+  ipAddress     String?
+  userAgent     String?
+  country       String?
+  region        String?
+  duplicateOf   String?   // ID of original lead if this is a duplicate
+  status        LeadStatus @default(NEW)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  clicks       Click[]
+  transfers    Transfer[]
+  conversions  Conversion[]
+  metaData Json?      // Store additional dynamic fields
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  DUPLICATE
+  INVALID
+  TRANSFERRED
+  CONVERTED
+}
+
+model Conversion {
+  id            String           @id @default(cuid())
+  visitorId     String
+  visitor       Visitor            @relation(fields: [visitorId], references: [id])
+  clickId       String
+  click         Click            @relation(fields: [clickId], references: [id])
+  leadId        String
+  lead          Lead             @relation(fields: [leadId], references: [id])
+  offerId       String
+  offer         AffiliateOffer   @relation(fields: [offerId], references: [id])
+  transferId    String?
+  transfer      Transfer?        @relation(fields: [transferId], references: [id])
+  value         Float
+  status        ConversionStatus @default(COMPLETED)
+  transactionId String? // External transaction ID
+  metadata      Json? // Additional conversion data
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+enum ConversionStatus {
+  COMPLETED
+  PENDING
+  REJECTED
+  REFUNDED
+}
+
+model TrafficSource {
+  id          String   @id @default(cuid())
+  name        String
+  type        String // SOCIAL_MEDIA, SEARCH_ENGINE, EMAIL, etc.
+  description String?
+  status      Status   @default(ACTIVE)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  visitors        Visitor[]
+  trackingLinks TrackingLink[]
+}
+
+model AffiliateNetwork {
+  id        String   @id @default(cuid())
+  name      String
+  website   String
+  loginUrl  String
+  username  String
+  password  String
+  status    Status   @default(ACTIVE)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  offers AffiliateOffer[]
+}
+
+model LandingPage {
+  id          String   @id @default(cuid())
+  name        String
+  baseUrl     String
+  parameters  Json
+  description String?
+  status      Status   @default(ACTIVE)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  visitors        Visitor[]
+  trackingLinks TrackingLink[]
+}
+
+model AdPlacement {
+  id          String          @id @default(cuid())
+  name        String
+  type        PlacementType
+  size        String? // For banner ads
+  location    String? // URL or description of placement
+  targetType  TargetType // OFFER or SPLIT_TEST
+  offerId     String?
+  offer       AffiliateOffer? @relation(fields: [offerId], references: [id])
+  splitTestId String?
+  splitTest   SplitTest?      @relation(fields: [splitTestId], references: [id])
+  status      Status          @default(ACTIVE)
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+enum PlacementType {
+  BANNER
+  LINK
+  POPUP
+  WIDGET
+  VIDEO
+  SOCIAL_POST
+  BLOG
+  EMAIL
+}
+
+enum TargetType {
+  OFFER
+  SPLIT_TEST
+}
+
+model AffiliateOffer {
+  id          String    @id @default(cuid())
+  name        String
+  network     String // Network name or "Internal"
+  type        OfferType
+  payout      Float
+  description String?
+  url         String?   
+  status      Status    @default(ACTIVE)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  adPlacements       AdPlacement[]
+  splitTests         SplitTestVariant[]
+  conversions        Conversion[]
+  AffiliateNetwork   AffiliateNetwork?  @relation(fields: [affiliateNetworkId], references: [id])
+  affiliateNetworkId String?
+}
+
+enum OfferType {
+  CPA
+  CPL
+  CPC
+  REVSHARE
+}
+
+model TrackingLink {
+  id              String          @id @default(cuid())
+  name            String?
+  url             String?
+  trafficSourceId String
+  trafficSource   TrafficSource   @relation(fields: [trafficSourceId], references: [id])
+  landingPageId   String
+  landingPage     LandingPage     @relation(fields: [landingPageId], references: [id])
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model TransferPartner {
+  id          String   @id @default(cuid())
+  name        String
+  website     String?
+  apiEndpoint String?
+  username    String?
+  password    String? // Encrypted
+  description String?
+  status      Status   @default(ACTIVE)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  transferFeeds TransferFeed[]
+}
+
+model TransferFeed {
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  partnerId      String
+  partner        TransferPartner @relation(fields: [partnerId], references: [id])
+  method         String // POST, PUT, PATCH
+  endpoint       String
+  headers        Json? // Request headers
+  bodyType       String? // json, formData
+  bodyTemplate   String // JSON template with placeholders
+  successPattern String // Pattern to match in response
+  prePingEnabled Boolean         @default(false)
+  prePingConfig  Json? // Pre-ping configuration
+  payoutType     PayoutType      @default(STATIC)
+  payoutValue    Float? // For static payouts
+  payoutPath     String? // JSON path for dynamic payouts
+  transferTiming Json? // Transfer timing configuration
+  scheduleConfig Json? // Day parting and scheduling config
+  capConfig      Json? // Transfer caps configuration
+  conditions     Json? // Transfer conditions
+  status         Status          @default(ACTIVE)
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  // Relations
+  transfers Transfer[]
+}
+
+enum PayoutType {
+  STATIC
+  DYNAMIC
+}
+
+enum TransferTiming {
+  REALTIME
+  AGED30
+  AGED60
+  AGED90
+}
+
+model Transfer {
+  id           String         @id @default(cuid())
+  feedId       String
+  feed         TransferFeed   @relation(fields: [feedId], references: [id])
+  leadId       String
+  lead         Lead           @relation(fields: [leadId], references: [id])
+  status       TransferStatus @default(PENDING)
+  responseCode Int? // HTTP response code
+  errorMessage String?
+  retryCount   Int            @default(0)
+  payout       Float? // Actual payout amount
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relations
+  conversions Conversion[]
+}
+
+enum TransferStatus {
+  FAILED_PING
+  FAILED_MAIN
+  PENDING
+  ACCEPTED
+  REJECTED
+  DUPLICATE
+  ERROR
+  RETRY
+}
+
+model SplitTest {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  status      Status    @default(ACTIVE)
+  startDate   DateTime?
+  endDate     DateTime?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  variants     SplitTestVariant[]
+  adPlacements AdPlacement[]
+}
+
+model SplitTestVariant {
+  id          String         @id @default(cuid())
+  splitTestId String
+  splitTest   SplitTest      @relation(fields: [splitTestId], references: [id])
+  offerId     String
+  offer       AffiliateOffer @relation(fields: [offerId], references: [id])
+  name        String
+  weight      Int            @default(1)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model Activity {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id])
+  type       ActivityType
+  action     ActivityAction
+  targetType String // The type of entity being acted upon
+  targetId   String // The ID of the entity being acted upon
+  details    String? // Human-readable description
+  metadata   Json? // Additional activity data
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime       @default(now())
+}
+
+enum ActivityType {
+  USER
+  TRAFFIC_SOURCE
+  LANDING_PAGE
+  AD_PLACEMENT
+  OFFER
+  TRACKING_LINK
+  SPLIT_TEST
+  TRANSFER_FEED
+  TRANSFER_PARTNER
+  SYSTEM
+}
+
+enum ActivityAction {
+  CREATE
+  UPDATE
+  DELETE
+  ACTIVATE
+  DEACTIVATE
+  CONFIGURE
+  LOGIN
+  LOGOUT
+  TRANSFER
+  CONVERSION
+}
