@@ -30,9 +30,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className="relative flex flex-1 flex-col min-h-screen">
+            <div className="relative flex flex-col min-h-screen">
               {!isExcludedPage && <Navbar />}
-              <main className="flex-1">{children}</main>
+              <main className="flex-1 relative">{children}</main>
             </div>
             <Toaster />
           </ThemeProvider>

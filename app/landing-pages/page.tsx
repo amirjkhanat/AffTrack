@@ -189,7 +189,7 @@ const GrapesJSBuilder = () => {
         images: pastedImages
       };
 
-      const response = await fetch('/api/llama', {
+      const response = await fetch('/api/gemini', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
