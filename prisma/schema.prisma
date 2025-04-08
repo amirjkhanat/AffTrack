@@ -230,7 +230,7 @@ model TrafficSource {
 
 model AffiliateNetwork {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   website   String
   loginUrl  String
   username  String
@@ -298,25 +298,24 @@ enum TargetType {
 }
 
 model AffiliateOffer {
-  id          String    @id @default(cuid())
-  name        String
-  network     String // Network name or "Internal"
-  type        OfferType
-  payout      Float
-  description String?
-  url         String?   
-  status      Status    @default(ACTIVE)
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                String           @id @default(cuid())
+  name              String
+  type              OfferType
+  payout            Float
+  description       String?
+  url               String?   
+  status            Status           @default(ACTIVE)
+  userId            String
+  user              User             @relation(fields: [userId], references: [id])
+  affiliateNetworkId String
+  affiliateNetwork  AffiliateNetwork @relation(fields: [affiliateNetworkId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   // Relations
-  adPlacements       AdPlacement[]
-  splitTests         SplitTestVariant[]
-  conversions        Conversion[]
-  AffiliateNetwork   AffiliateNetwork?  @relation(fields: [affiliateNetworkId], references: [id])
-  affiliateNetworkId String?
+  adPlacements      AdPlacement[]
+  splitTests        SplitTestVariant[]
+  conversions       Conversion[]
 }
 
 enum OfferType {

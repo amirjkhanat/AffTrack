@@ -67,7 +67,7 @@ const TRACKING_PARAMETERS = [
 interface Offer {
   id: string;
   name: string;
-  networkId: string;
+  affiliateNetworkId: string;
   type: string;
   payout: number;
   payoutType: string;
@@ -97,7 +97,7 @@ export default function OffersTab() {
   const [formData, setFormData] = useState({
     id: "",
     name: "",
-    network: "",
+    affiliateNetworkId: "",
     type: "CPA",
     payout: 0,
     description: "",
@@ -139,7 +139,7 @@ export default function OffersTab() {
     setFormData({
       id: offer.id,
       name: offer.name,
-      network: offer.network || "",
+      affiliateNetworkId: offer.affiliateNetworkId || "",
       type: offer.type || "CPA",
       payout: parseFloat(offer.payout) || 0,
       description: offer.description || "",
@@ -183,7 +183,7 @@ export default function OffersTab() {
       setFormData({
         id: "",
         name: "",
-        network: "",
+        affiliateNetworkId: "",
         type: "CPA",
         payout: 0,
         description: "",
@@ -231,8 +231,8 @@ export default function OffersTab() {
               <div className="space-y-2">
                 <Label htmlFor="network">Network</Label>
                 <Select
-                  value={formData.network}
-                  onValueChange={(value) => setFormData({ ...formData, network: value })}
+                  value={formData.affiliateNetworkId}
+                  onValueChange={(value) => setFormData({ ...formData, affiliateNetworkId: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select network" />
@@ -384,7 +384,7 @@ export default function OffersTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {offers.map((offer) => {
-          const network = networks.find(n => n.id === offer.network);
+          const network = networks.find(n => n.id === offer.affiliateNetworkId);
           return (
             <Card key={offer.id}>
               <CardHeader>
@@ -394,7 +394,7 @@ export default function OffersTab() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Network:</span>
-                    <span>{network?.name || offer.network}</span>
+                    <span>{network?.name || "Unknown Network"}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Type:</span>
