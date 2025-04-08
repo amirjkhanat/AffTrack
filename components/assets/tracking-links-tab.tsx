@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Link as LinkIcon } from "lucide-react";
+import { Plus, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const PARAMETERS = [
   { label: "First Name", value: "{firstName}" },
@@ -85,6 +86,11 @@ export default function TrackingLinksTab() {
   const [linkUrl, setLinkUrl] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [formErrors, setFormErrors] = useState<{
+    trafficSourceId?: string;
+    landingPageId?: string;
+    general?: string;
+  }>({});
 
   useEffect(() => {
     fetchData();
@@ -124,6 +130,27 @@ export default function TrackingLinksTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const errors: {
+      trafficSourceId?: string;
+      landingPageId?: string;
+    } = {};
+    
+    if (!formData.trafficSourceId) {
+      errors.trafficSourceId = "Traffic source is required";
+    }
+    
+    if (!formData.landingPageId) {
+      errors.landingPageId = "Landing page is required";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    setFormErrors({});
+    
     try {
       console.log('Submitting with URL:', linkUrl);
       
@@ -137,8 +164,8 @@ export default function TrackingLinksTab() {
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
+        const errorText = await response.text();
+        throw new Error(errorText);
       }
 
       setIsDialogOpen(false);
@@ -146,6 +173,9 @@ export default function TrackingLinksTab() {
       await fetchData();
     } catch (error) {
       console.error('Error saving tracking link:', error);
+      setFormErrors({
+        general: error instanceof Error ? error.message : 'An unexpected error occurred'
+      });
     }
   };
 
@@ -192,6 +222,28 @@ export default function TrackingLinksTab() {
                 {isEditing ? 'Edit Tracking Link' : 'Generate Tracking Link'}
               </DialogTitle>
             </DialogHeader>
+            
+            {formErrors.general && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{formErrors.general}</AlertDescription>
+              </Alert>
+            )}
+            
+            {(trafficSources.length === 0 || landingPages.length === 0) && (
+              <Alert className="mb-4 bg-yellow-50 text-yellow-800">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {trafficSources.length === 0 && landingPages.length === 0 
+                    ? "You need to create at least one traffic source and one landing page before creating tracking links."
+                    : trafficSources.length === 0 
+                      ? "You need to create at least one traffic source before creating tracking links."
+                      : "You need to create at least one landing page before creating tracking links."
+                  }
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Link Name</Label>
@@ -205,40 +257,68 @@ export default function TrackingLinksTab() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="traffic-source">Traffic Source</Label>
+                  <Label htmlFor="traffic-source" className={formErrors.trafficSourceId ? "text-destructive" : ""}>
+                    Traffic Source <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={formData.trafficSourceId}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, trafficSourceId: value }))}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({ ...prev, trafficSourceId: value }));
+                      setFormErrors(prev => ({ ...prev, trafficSourceId: undefined }));
+                    }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={formErrors.trafficSourceId ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select traffic source" />
                     </SelectTrigger>
                     <SelectContent>
-                      {trafficSources.map((source) => (
-                        <SelectItem key={source.id} value={source.id}>
-                          {source.name}
-                        </SelectItem>
-                      ))}
+                      {trafficSources.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground">
+                          No traffic sources available. Please create one first.
+                        </div>
+                      ) : (
+                        trafficSources.map((source) => (
+                          <SelectItem key={source.id} value={source.id}>
+                            {source.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
+                  {formErrors.trafficSourceId && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.trafficSourceId}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="landing-page">Landing Page</Label>
+                  <Label htmlFor="landing-page" className={formErrors.landingPageId ? "text-destructive" : ""}>
+                    Landing Page <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={formData.landingPageId}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, landingPageId: value }))}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({ ...prev, landingPageId: value }));
+                      setFormErrors(prev => ({ ...prev, landingPageId: undefined }));
+                    }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={formErrors.landingPageId ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select landing page" />
                     </SelectTrigger>
                     <SelectContent>
-                      {landingPages.map((page) => (
-                        <SelectItem key={page.id} value={page.id}>
-                          {page.name}
-                        </SelectItem>
-                      ))}
+                      {landingPages.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground">
+                          No landing pages available. Please create one first.
+                        </div>
+                      ) : (
+                        landingPages.map((page) => (
+                          <SelectItem key={page.id} value={page.id}>
+                            {page.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
+                  {formErrors.landingPageId && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.landingPageId}</p>
+                  )}
                 </div>
               </div>
 
@@ -313,17 +393,16 @@ export default function TrackingLinksTab() {
                   variant="outline"
                   onClick={() => {
                     setIsDialogOpen(false);
-                    setFormData({
-                      name: "",
-                      trafficSourceId: "",
-                      landingPageId: "",
-                      parameters: []
-                    });
+                    resetForm();
+                    setFormErrors({});
                   }}
                 >
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button 
+                  type="submit"
+                  disabled={trafficSources.length === 0 || landingPages.length === 0}
+                >
                   {isEditing ? 'Update' : 'Generate'} Link
                 </Button>
               </div>
