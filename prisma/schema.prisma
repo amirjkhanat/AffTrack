@@ -484,6 +484,7 @@ enum ActivityType {
   TRANSFER_FEED
   TRANSFER_PARTNER
   SYSTEM
+  AFFILIATE_NETWORK  // Add this new type
 }
 
 enum ActivityAction {

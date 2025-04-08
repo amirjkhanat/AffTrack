@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "ActivityType" ADD VALUE 'AFFILIATE_NETWORK';

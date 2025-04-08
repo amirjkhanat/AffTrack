@@ -33,6 +33,7 @@ interface Network {
 export default function NetworksTab() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [networks, setNetworks] = useState<Network[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -42,9 +43,19 @@ export default function NetworksTab() {
     username: "",
     password: ""
   });
+  const [editFormData, setEditFormData] = useState({
+    id: "",
+    name: "",
+    website: "",
+    loginUrl: "",
+    username: "",
+    password: ""
+  });
   const [formError, setFormError] = useState<string | null>(null);
+  const [editFormError, setEditFormError] = useState<string | null>(null);
   const [isNameChecking, setIsNameChecking] = useState(false);
   const [isNameTaken, setIsNameTaken] = useState(false);
+  const [isEditNameTaken, setIsEditNameTaken] = useState(false);
 
   useEffect(() => {
     fetchNetworks();
@@ -78,11 +89,43 @@ export default function NetworksTab() {
     }
   };
 
+  const checkEditNetworkName = async (name: string) => {
+    if (!name.trim()) {
+      setIsEditNameTaken(false);
+      return;
+    }
+    
+    const exists = networks.some(
+      network => network.name.toLowerCase() === name.toLowerCase() && 
+                network.id !== editFormData.id
+    );
+    setIsEditNameTaken(exists);
+  };
+
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
     setFormData({ ...formData, name: newName });
     checkNetworkName(newName);
     setFormError(null);
+  };
+
+  const handleEditNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setEditFormData({ ...editFormData, name: newName });
+    checkEditNetworkName(newName);
+    setEditFormError(null);
+  };
+
+  const handleEdit = (network: Network) => {
+    setEditFormData({
+      id: network.id,
+      name: network.name,
+      website: network.website,
+      loginUrl: network.loginUrl,
+      username: network.username,
+      password: network.password
+    });
+    setEditOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,6 +171,64 @@ export default function NetworksTab() {
     } catch (error) {
       console.error("Failed to create network:", error);
       setFormError(error instanceof Error ? error.message : "An unknown error occurred");
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isEditNameTaken) {
+      setEditFormError("A network with this name already exists");
+      return;
+    }
+    
+    setEditFormError(null);
+    try {
+      const response = await fetch(`/api/assets/networks/${editFormData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFormData)
+      });
+      
+      if (!response.ok) {
+        // Try to parse the error response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response isn't valid JSON, use status text
+          throw new Error(`Failed to update network: ${response.statusText}`);
+        }
+        
+        if (errorData.code === "P2002" && errorData.meta?.target?.includes("name")) {
+          setEditFormError("A network with this name already exists");
+          return;
+        } else {
+          throw new Error(errorData.error || "Failed to update network");
+        }
+      }
+      
+      setEditOpen(false);
+      
+      // Reset form
+      setEditFormData({
+        id: "",
+        name: "",
+        website: "",
+        loginUrl: "",
+        username: "",
+        password: ""
+      });
+      setIsEditNameTaken(false);
+
+      // Show success message or toast notification here if desired
+      
+      // Refresh the networks list
+      await fetchNetworks();
+      
+    } catch (error) {
+      console.error("Failed to update network:", error);
+      setEditFormError(error instanceof Error ? error.message : "An unknown error occurred");
     }
   };
 
@@ -262,6 +363,128 @@ export default function NetworksTab() {
         </Dialog>
       </div>
 
+      {/* Edit Network Dialog */}
+      <Dialog open={editOpen} onOpenChange={(isOpen) => {
+        setEditOpen(isOpen);
+        if (!isOpen) {
+          setEditFormData({
+            id: "",
+            name: "",
+            website: "",
+            loginUrl: "",
+            username: "",
+            password: ""
+          });
+          setEditFormError(null);
+          setIsEditNameTaken(false);
+        }
+      }}>
+        <DialogContent>
+          <form onSubmit={handleEditSubmit}>
+            <DialogHeader>
+              <DialogTitle>Edit Affiliate Network</DialogTitle>
+            </DialogHeader>
+            {editFormError && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{editFormError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Network Name</Label>
+                <Input 
+                  id="edit-name" 
+                  placeholder="Enter network name"
+                  value={editFormData.name}
+                  onChange={handleEditNameChange}
+                  className={isEditNameTaken ? "border-red-500" : ""}
+                  required
+                />
+                {isEditNameTaken && (
+                  <p className="text-sm text-red-500 mt-1">
+                    This network name is already taken
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-website">Website</Label>
+                <Input 
+                  id="edit-website" 
+                  placeholder="https://network.com" 
+                  type="url"
+                  value={editFormData.website}
+                  onChange={(e) => setEditFormData({ ...editFormData, website: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-loginUrl">Login URL</Label>
+                <Input 
+                  id="edit-loginUrl" 
+                  placeholder="https://network.com/login" 
+                  type="url"
+                  value={editFormData.loginUrl}
+                  onChange={(e) => setEditFormData({ ...editFormData, loginUrl: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-username">Username</Label>
+                <Input 
+                  id="edit-username" 
+                  placeholder="Enter username"
+                  value={editFormData.username}
+                  onChange={(e) => setEditFormData({ ...editFormData, username: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="edit-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter password"
+                    value={editFormData.password}
+                    onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setEditOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={isEditNameTaken}
+              >
+                Update Network
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {networks.map((network) => (
           <Card key={network.id}>
@@ -269,7 +492,11 @@ export default function NetworksTab() {
               <CardTitle className="text-sm font-medium">
                 {network.name}
               </CardTitle>
-              <Button variant="ghost" size="sm">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => handleEdit(network)}
+              >
                 Edit
               </Button>
             </CardHeader>
