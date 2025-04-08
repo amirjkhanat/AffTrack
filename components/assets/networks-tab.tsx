@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Plus } from "lucide-react";
+import { Eye, EyeOff, Plus, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Network {
   id: string;
@@ -41,8 +42,10 @@ export default function NetworksTab() {
     username: "",
     password: ""
   });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isNameChecking, setIsNameChecking] = useState(false);
+  const [isNameTaken, setIsNameTaken] = useState(false);
 
-  // Fetch networks on component mount
   useEffect(() => {
     fetchNetworks();
   }, []);
@@ -58,8 +61,39 @@ export default function NetworksTab() {
     }
   };
 
+  const checkNetworkName = async (name: string) => {
+    if (!name.trim()) {
+      setIsNameTaken(false);
+      return;
+    }
+    
+    setIsNameChecking(true);
+    try {
+      const exists = networks.some(
+        network => network.name.toLowerCase() === name.toLowerCase()
+      );
+      setIsNameTaken(exists);
+    } finally {
+      setIsNameChecking(false);
+    }
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setFormData({ ...formData, name: newName });
+    checkNetworkName(newName);
+    setFormError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isNameTaken) {
+      setFormError("A network with this name already exists");
+      return;
+    }
+    
+    setFormError(null);
     try {
       const response = await fetch("/api/assets/networks", {
         method: "POST",
@@ -67,12 +101,19 @@ export default function NetworksTab() {
         body: JSON.stringify(formData)
       });
       
-      if (!response.ok) throw new Error("Failed to create network");
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        if (errorData.code === "P2002" && errorData.meta?.target?.includes("name")) {
+          setFormError("A network with this name already exists");
+          return;
+        } else {
+          throw new Error(errorData.message || "Failed to create network");
+        }
+      }
       
-      // Close the modal
       setOpen(false);
       
-      // Reset form
       setFormData({
         name: "",
         website: "",
@@ -80,12 +121,13 @@ export default function NetworksTab() {
         username: "",
         password: ""
       });
+      setIsNameTaken(false);
 
-      // Refresh the networks list
       await fetchNetworks();
       
     } catch (error) {
       console.error("Failed to create network:", error);
+      setFormError(error instanceof Error ? error.message : "An unknown error occurred");
     }
   };
 
@@ -93,7 +135,20 @@ export default function NetworksTab() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Networks</h2>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) {
+            setFormData({
+              name: "",
+              website: "",
+              loginUrl: "",
+              username: "",
+              password: ""
+            });
+            setFormError(null);
+            setIsNameTaken(false);
+          }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -105,6 +160,12 @@ export default function NetworksTab() {
               <DialogHeader>
                 <DialogTitle>Add New Affiliate Network</DialogTitle>
               </DialogHeader>
+              {formError && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{formError}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Network Name</Label>
@@ -112,9 +173,15 @@ export default function NetworksTab() {
                     id="name" 
                     placeholder="Enter network name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={handleNameChange}
+                    className={isNameTaken ? "border-red-500" : ""}
                     required
                   />
+                  {isNameTaken && (
+                    <p className="text-sm text-red-500 mt-1">
+                      This network name is already taken
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="website">Website</Label>
@@ -176,10 +243,17 @@ export default function NetworksTab() {
                 </div>
               </div>
               <div className="flex justify-end space-x-2 mt-4">
-                <Button type="button" variant="outline">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button 
+                  type="submit"
+                  disabled={isNameTaken || isNameChecking}
+                >
                   Save Network
                 </Button>
               </div>
@@ -188,7 +262,6 @@ export default function NetworksTab() {
         </Dialog>
       </div>
 
-      {/* Networks Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {networks.map((network) => (
           <Card key={network.id}>
