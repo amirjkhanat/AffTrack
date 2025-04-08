@@ -194,8 +194,8 @@ export default function LandingPagesTab() {
   };
 
   const handleView = (page: any) => {
-    // Open the landing page in a new tab
-    window.open(`/landing-pages/${page.id}`, '_blank');
+    // Open the landing page in a new tab with isolated route
+    window.open(`/l/${page.id}`, '_blank');
   };
 
   const handleDelete = async (pageId: string) => {
