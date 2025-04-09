@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import { ACTIVITY_TYPES, ACTIVITY_ACTIONS } from "@/lib/constants/activityTypes";
 
 export async function POST(req: Request) {
   try {
@@ -25,11 +26,11 @@ export async function POST(req: Request) {
 
       await tx.activity.create({
         data: {
-          type: "TRAFFIC_SOURCE",
-          action: "CREATE",
+          type: ACTIVITY_TYPES.AFFILIATE_NETWORK,
+          action: ACTIVITY_ACTIONS.CREATE,
           userId: session.user.id,
           details: `Created affiliate network: ${network.name}`,
-          targetType: "NETWORK",
+          targetType: ACTIVITY_TYPES.AFFILIATE_NETWORK,
           targetId: network.id
         }
       });
@@ -69,11 +70,11 @@ export async function PUT(req: Request) {
 
       await tx.activity.create({
         data: {
-          type: "NETWORK",
-          action: "UPDATE",
+          type: ACTIVITY_TYPES.AFFILIATE_NETWORK,
+          action: ACTIVITY_ACTIONS.UPDATE,
           userId: session.user.id,
           details: `Updated affiliate network: ${network.name}`,
-          targetType: "NETWORK",
+          targetType: ACTIVITY_TYPES.AFFILIATE_NETWORK,
           targetId: network.id
         }
       });
@@ -112,11 +113,11 @@ export async function DELETE(req: Request) {
 
       await tx.activity.create({
         data: {
-          type: "NETWORK",
-          action: "DELETE",
+          type: ACTIVITY_TYPES.AFFILIATE_NETWORK,
+          action: ACTIVITY_ACTIONS.DELETE,
           userId: session.user.id,
           details: `Deleted affiliate network: ${network.name}`,
-          targetType: "NETWORK",
+          targetType: ACTIVITY_TYPES.AFFILIATE_NETWORK,
           targetId: network.id
         }
       });
@@ -161,4 +162,4 @@ export async function GET(req: Request) {
     console.error("[NETWORKS_GET]", error);
     return new NextResponse("Internal error", { status: 500 });
   }
-} 
+}

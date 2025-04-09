@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { ACTIVITY_TYPES, ACTIVITY_ACTIONS } from '@/lib/constants/activityTypes';
 
 export async function PUT(
   request: Request,
@@ -53,11 +54,11 @@ export async function PUT(
 
       await tx.activity.create({
         data: {
-          type: "AFFILIATE_NETWORK", // Changed from "NETWORK" to "AFFILIATE_NETWORK"
-          action: "UPDATE",
+          type: ACTIVITY_TYPES.AFFILIATE_NETWORK,
+          action: ACTIVITY_ACTIONS.UPDATE,
           userId: session.user.id,
           details: `Updated affiliate network: ${network.name}`,
-          targetType: "AFFILIATE_NETWORK", // Changed from "NETWORK" to "AFFILIATE_NETWORK"
+          targetType: ACTIVITY_TYPES.AFFILIATE_NETWORK,
           targetId: network.id,
           metadata: { ...body, password: undefined } // Don't log password
         }
@@ -139,11 +140,11 @@ export async function DELETE(
 
       await tx.activity.create({
         data: {
-          type: "AFFILIATE_NETWORK", // Changed from "NETWORK" to "AFFILIATE_NETWORK"
-          action: "DELETE",
+          type: ACTIVITY_TYPES.AFFILIATE_NETWORK,
+          action: ACTIVITY_ACTIONS.DELETE,
           userId: session.user.id,
           details: `Deleted affiliate network: ${network.name}`,
-          targetType: "AFFILIATE_NETWORK", // Changed from "NETWORK" to "AFFILIATE_NETWORK"
+          targetType: ACTIVITY_TYPES.AFFILIATE_NETWORK,
           targetId: id
         }
       });
