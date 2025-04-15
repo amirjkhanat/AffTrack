@@ -49,7 +49,7 @@ export function ConversionsFeed({ items }: ConversionsFeedProps) {
                 <Network className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono text-sm">{item.ipAddress}</span>
                 <Badge variant="outline" className="ml-2 text-xs">
-                  Click ID: {item.clickId.slice(0, 8)}
+                  Click ID: {item.clickId ? item.clickId.slice(0, 8) : 'Unknown'}
                 </Badge>
               </div>
               <div className="flex flex-col items-end gap-1">
@@ -68,33 +68,47 @@ export function ConversionsFeed({ items }: ConversionsFeedProps) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{item.offer.name}</span>
+                  <span className="text-sm font-medium">{item.offer?.name || 'Unknown Offer'}</span>
                 </div>
                 <Badge 
                   variant="outline" 
-                  className={getOfferTypeColor(item.offer.type)}
+                  className={getOfferTypeColor(item.offer?.type || '')}
                 >
-                  {item.offer.type}
+                  {item.offer?.type || 'Unknown'}
                 </Badge>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Link2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{item.offer.network}</span>
+                  <span className="text-sm font-medium">
+                    {typeof item.offer?.network === 'string'
+                      ? item.offer.network
+                      : (typeof item.offer?.network === 'object' && item.offer.network?.name)
+                        ? item.offer.network.name
+                        : 'Unknown Network'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1 text-sm">
                   <DollarSign className="h-3 w-3 text-muted-foreground" />
-                  <span className="font-medium">{item.conversionDetails.value.toFixed(2)}</span>
+                  <span className="font-medium">{item.conversionDetails?.value !== undefined ? item.conversionDetails.value.toFixed(2) : '0.00'}</span>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{item.source.name}</span>
+              <span>{typeof item.source === 'string' ? item.source : (typeof item.source === 'object' && item.source?.name ? item.source.name : 'Unknown Source')}</span>
               <ArrowRight className="h-4 w-4" />
-              <span>{item.landingPage}</span>
+              <span>
+                {typeof item.landingPage === 'string' 
+                  ? item.landingPage 
+                  : (typeof item.landingPage === 'object' && item.landingPage?.name ? item.landingPage.name : 'Unknown Landing Page')}
+              </span>
               <ArrowRight className="h-4 w-4" />
-              <span>{item.placement}</span>
+              <span>
+                {typeof item.placement === 'string' 
+                  ? item.placement 
+                  : (typeof item.placement === 'object' && item.placement?.name ? item.placement.name : 'Unknown Placement')}
+              </span>
             </div>
 
             <Separator />
@@ -106,7 +120,7 @@ export function ConversionsFeed({ items }: ConversionsFeedProps) {
                   variant="outline" 
                   className="bg-blue-500/10 text-blue-500"
                 >
-                  {item.conversionDetails.transactionId.slice(0, 8)}
+                  {item.conversionDetails?.transactionId ? item.conversionDetails.transactionId.slice(0, 8) : 'Unknown'}
                 </Badge>
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />

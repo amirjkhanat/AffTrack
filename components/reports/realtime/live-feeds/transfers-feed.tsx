@@ -62,7 +62,7 @@ export function TransfersFeed({ items }: TransfersFeedProps) {
                   <Network className="h-4 w-4 text-muted-foreground" />
                   <span className="font-mono text-sm">{item.ipAddress}</span>
                   <Badge variant="outline" className="ml-2 text-xs">
-                    Lead ID: {item.leadId.slice(0, 8)}
+                    Lead ID: {item.leadId ? item.leadId.slice(0, 8) : 'Unknown'}
                   </Badge>
                 </div>
                 <div className="flex flex-col items-end gap-1">
@@ -82,25 +82,45 @@ export function TransfersFeed({ items }: TransfersFeedProps) {
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">
-                      {item.leadDetails.firstName} {item.leadDetails.lastName}
+                      {item.leadDetails ? `${item.leadDetails.firstName} ${item.leadDetails.lastName}` : 'Unknown'}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground ml-6">
-                    {item.leadDetails.email}
+                    {item.leadDetails?.email || 'Unknown'}
                   </p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Link2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{item.network}</span>
+                    <span className="text-sm font-medium">
+                      {typeof item.network === 'string'
+                        ? item.network
+                        : (typeof item.network === 'object' && item.network?.name)
+                          ? item.network.name
+                          : 'Unknown Network'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 ml-6">
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{item.offer}</span>
+                    <span className="text-sm">
+                      {typeof item.offer === 'string'
+                        ? item.offer
+                        : (typeof item.offer === 'object' && item.offer?.name)
+                          ? item.offer.name
+                          : 'Unknown Offer'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 ml-6">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">${item.payout.toFixed(2)}</span>
+                    <span className="text-sm">
+                      {typeof item.payout === 'number'
+                        ? `$${item.payout.toFixed(2)}`
+                        : typeof item.payout === 'string'
+                          ? item.payout
+                          : (typeof item.payout === 'object' && item.payout?.value)
+                            ? `$${item.payout.value}`
+                            : '0.00'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -112,11 +132,11 @@ export function TransfersFeed({ items }: TransfersFeedProps) {
                 <div className="flex items-center gap-4">
                   <Badge 
                     variant="outline" 
-                    className={`cursor-pointer ${getStatusColor(item.status)}`}
+                    className={`cursor-pointer ${getStatusColor(item.status || '')}`}
                     onClick={() => setSelectedTransfer(item)}
                   >
-                    {getStatusIcon(item.status)}
-                    {item.status}
+                    {getStatusIcon(item.status || '')}
+                    {item.status || 'Unknown'}
                   </Badge>
                 </div>
               </div>

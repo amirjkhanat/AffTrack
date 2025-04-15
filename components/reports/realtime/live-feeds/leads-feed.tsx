@@ -41,6 +41,10 @@ export function LeadsFeed() {
     return <div className="p-4 text-center">Loading leads...</div>;
   }
 
+  if (!items.length) {
+    return <div className="p-4 text-center text-muted-foreground">No leads available</div>;
+  }
+
   return (
     <>
       <ScrollArea className="h-[600px]">
@@ -55,7 +59,7 @@ export function LeadsFeed() {
                   <Network className="h-4 w-4 text-muted-foreground" />
                   <span className="font-mono text-sm">{item?.ipAddress}</span>
                   <Badge variant="outline" className="ml-2 text-xs">
-                    Visitor ID: {item?.visitor?.id?.slice(0, 8) || 'N/A'}
+                    Visitor ID: {item.visitor?.id ? item.visitor.id.slice(0, 8) : 'N/A'}
                   </Badge>
                 </div>
                 <div className="flex flex-col items-end gap-1">
@@ -74,14 +78,14 @@ export function LeadsFeed() {
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">
-                      {item.leadDetails.firstName} {item.leadDetails.lastName}
+                      {item.leadDetails ? `${item.leadDetails.firstName} ${item.leadDetails.lastName}` : 'Unknown'}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground ml-6">
-                    {item.leadDetails.email}
+                    {item.leadDetails?.email || 'Unknown'}
                   </p>
                   <p className="text-sm text-muted-foreground ml-6">
-                    {item.leadDetails.phone}
+                    {item.leadDetails?.phone || 'Unknown'}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -91,7 +95,7 @@ export function LeadsFeed() {
                   </div>
                   <div className="flex flex-col gap-2 ml-6">
                     <span className="text-sm font-medium">{item.landingPage}</span>
-                    <OptInDisplay optIns={item.leadDetails.optIns} />
+                    <OptInDisplay optIns={item.leadDetails?.optIns || {}} />
                   </div>
                 </div>
               </div>
@@ -112,7 +116,7 @@ export function LeadsFeed() {
                   </Button>
                   <div className="text-sm">
                     <span className="text-muted-foreground">Value:</span>{" "}
-                    <span className="font-medium">${item.value.toFixed(2)}</span>
+                    <span className="font-medium">${typeof item.value === 'number' ? item.value.toFixed(2) : '0.00'}</span>
                   </div>
                 </div>
               </div>

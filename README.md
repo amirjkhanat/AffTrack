@@ -43,7 +43,11 @@ For detailed installation instructions, please refer to our [Installation Guide]
 2. Install dependencies: `npm install`
 3. Set up environment variables
 4. Initialize database: `npx prisma migrate dev`
-5. Run the development server: `npm run dev`
+5. Set up NEXTAUTH_SECRET in file .env.local on root of project. You can generate it with:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+6. Run the development server: `npm run dev`
 
 ## Documentation
 

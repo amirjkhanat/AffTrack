@@ -12,11 +12,12 @@ import { FeedType } from "./realtime/types";
 export default function RealtimeTab() {
   const [activeTab, setActiveTab] = useState<FeedType>("visitors");
   const [searchTerm, setSearchTerm] = useState("");
-  const data = realtimeData.generateFeed(activeTab);
+  const data = activeTab === "clicks"
+    ? { metrics: {}, items: [] } // отключаем mock-данные для кликов
+    : realtimeData.generateFeed(activeTab);
 
   const filteredItems = data.items.filter(item => {
     const searchLower = searchTerm.toLowerCase();
-    
     // Common fields to search
     const commonFields = [
       item.ipAddress,
@@ -24,34 +25,30 @@ export default function RealtimeTab() {
       Object.values(item.utmTags || {}).join(" ")
     ].join(" ").toLowerCase();
 
-    // Type-specific fields
     switch (activeTab) {
       case "visitors":
         return commonFields.includes(searchLower) ||
-          item.sourceName.toLowerCase().includes(searchLower) ||
-          item.landingPage.name.toLowerCase().includes(searchLower);
-      
+          (typeof item.sourceName === 'string' && item.sourceName.toLowerCase().includes(searchLower)) ||
+          (typeof item.landingPage === 'string' && item.landingPage.toLowerCase().includes(searchLower)) ||
+          (typeof item.landingPage === 'object' && item.landingPage?.name && item.landingPage.name.toLowerCase().includes(searchLower));
       case "leads":
         return commonFields.includes(searchLower) ||
-          item.leadDetails?.firstName?.toLowerCase().includes(searchLower) ||
-          item.leadDetails?.lastName?.toLowerCase().includes(searchLower) ||
-          item.leadDetails?.email?.toLowerCase().includes(searchLower);
-      
+          (item.leadDetails?.firstName && item.leadDetails.firstName.toLowerCase().includes(searchLower)) ||
+          (item.leadDetails?.lastName && item.leadDetails.lastName.toLowerCase().includes(searchLower)) ||
+          (item.leadDetails && 'email' in item.leadDetails && item.leadDetails.email && item.leadDetails.email.toLowerCase().includes(searchLower));
       case "clicks":
         return commonFields.includes(searchLower) ||
-          item.placement.name.toLowerCase().includes(searchLower) ||
-          item.offer.name.toLowerCase().includes(searchLower);
-      
+          (item.placement && typeof item.placement === 'object' && item.placement.name && item.placement.name.toLowerCase().includes(searchLower)) ||
+          (item.offer && typeof item.offer === 'object' && item.offer.name && item.offer.name.toLowerCase().includes(searchLower));
       case "transfers":
         return commonFields.includes(searchLower) ||
-          item.network.toLowerCase().includes(searchLower) ||
-          item.offer.toLowerCase().includes(searchLower);
-      
+          (typeof item.network === 'string' && item.network.toLowerCase().includes(searchLower)) ||
+          (typeof item.offer === 'string' && item.offer.toLowerCase().includes(searchLower));
       case "conversions":
         return commonFields.includes(searchLower) ||
-          item.offer.name.toLowerCase().includes(searchLower) ||
-          item.placement.toLowerCase().includes(searchLower);
-      
+          (item.offer && typeof item.offer === 'object' && item.offer.name && item.offer.name.toLowerCase().includes(searchLower)) ||
+          (typeof item.placement === 'string' && item.placement.toLowerCase().includes(searchLower)) ||
+          (item.placement && typeof item.placement === 'object' && item.placement.name && item.placement.name.toLowerCase().includes(searchLower));
       default:
         return true;
     }

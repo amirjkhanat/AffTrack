@@ -88,11 +88,7 @@ export function VisitorsFeed() {
   }
 
   if (!items.length) {
-    return (
-      <div className="p-4 text-center text-muted-foreground">
-        No visitors to display
-      </div>
-    );
+    return <div className="p-4 text-center text-muted-foreground">No visitors available</div>;
   }
 
   return (
