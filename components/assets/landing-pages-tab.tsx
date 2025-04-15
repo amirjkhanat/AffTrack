@@ -160,13 +160,10 @@ export default function LandingPagesTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      
       if (!response.ok) {
         throw new Error(`Failed to ${isEditing ? 'update' : 'create'} landing page`);
       }
-      
       const data = await response.json();
-      
       if (isEditing) {
         setLandingPages(landingPages.map(page => 
           page.id === data.id ? data : page
@@ -174,10 +171,9 @@ export default function LandingPagesTab() {
       } else {
         setLandingPages([...landingPages, data]);
       }
-      
       setIsDialogOpen(false);
       setIsEditing(false);
-      setFormData({ id: "", name: "", url: "", description: "", parameters: [] });
+      setFormData({ id: '', name: '', baseUrl: '', parameters: [], description: '' });
     } catch (error) {
       console.error(`Failed to ${isEditing ? 'update' : 'create'} landing page:`, error);
     }

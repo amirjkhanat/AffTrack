@@ -7,6 +7,7 @@ import { blocks } from '@/lib/blocks';
 import { Undo, Redo } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { selectors } from '@/lib/selectors';
+import { useSearchParams } from 'next/navigation';
 
 const GrapesJSBuilder = () => {
   const [input, setInput] = useState('');
@@ -15,6 +16,10 @@ const GrapesJSBuilder = () => {
   const [pastedImages, setPastedImages] = useState<string[]>([]);
   const [landingPageName, setLandingPageName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const searchParams = useSearchParams();
+  const pageId = searchParams.get('pageId');
 
   const escapeName = (name: string) => `${name}`.trim().replace(/([^a-z0-9\w-:/]+)/gi, '-');
 
@@ -83,6 +88,26 @@ const GrapesJSBuilder = () => {
       editorInstance.destroy();
     };
   }, []);
+
+  useEffect(() => {
+    if (pageId && editor) {
+      setIsLoading(true);
+      fetch(`/api/landing-pages/${pageId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to load landing page');
+          return res.json();
+        })
+        .then(data => {
+          editor.setComponents(data.html || '');
+          editor.setStyle(data.css || '');
+          setLandingPageName(data.name || '');
+        })
+        .catch(() => {
+          toast.error('Failed to load landing page');
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [pageId, editor]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
@@ -266,14 +291,14 @@ const GrapesJSBuilder = () => {
 
   const handleSave = async () => {
     if (!editor) return;
-    
     setIsSaving(true);
     try {
       const html = editor.getHtml();
       const css = editor.getCss();
-      
-      const response = await fetch('/api/landing-pages', {
-        method: 'POST',
+      const method = pageId ? 'PUT' : 'POST';
+      const url = pageId ? `/api/landing-pages/${pageId}` : '/api/landing-pages';
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -284,16 +309,13 @@ const GrapesJSBuilder = () => {
           css
         }),
       });
-
       if (response.status === 401) {
         toast.error('Please login to save landing pages');
         return;
       }
-
       if (!response.ok) {
         throw new Error('Failed to save');
       }
-
       const data = await response.json();
       toast.success('Landing page saved successfully', {
         action: {
@@ -301,7 +323,7 @@ const GrapesJSBuilder = () => {
           onClick: () => window.open(`/landing-pages/${data.id}`, '_blank'),
         },
       });
-      setLandingPageName('');
+      if (!pageId) setLandingPageName('');
     } catch (error) {
       toast.error('Failed to save landing page');
     } finally {
@@ -333,6 +355,12 @@ const GrapesJSBuilder = () => {
           },
         }}
       />
+      
+      {isLoading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-50">
+          <div className="text-lg text-gray-600">Loading landing page...</div>
+        </div>
+      )}
       
       <div style={{ flex: 1, display: 'flex' }}>
         <div id="blocks" style={{ width: '200px', borderRight: '1px solid #ddd' }}></div>
